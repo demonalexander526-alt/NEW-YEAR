@@ -1,51 +1,53 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>New Year Countdown</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,Arial,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,Arial}
 body{
-  min-height:100vh;
-  background:radial-gradient(circle at top,#1a0033,#000);
+  background:radial-gradient(circle at top,#140022,#000);
   color:#fff;
+  overflow:hidden;
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
+  min-height:100vh;
 }
-
-/* ===== COUNTDOWN BLOCK ===== */
-#countdownBox{
-  text-align:center;
+#countdown{
+  z-index:5;
   padding:40px 60px;
-  border-radius:24px;
-  backdrop-filter:blur(14px);
-  background:rgba(255,255,255,.08);
-  box-shadow:0 0 40px rgba(180,0,255,.6);
-  z-index:10;
+  border-radius:26px;
+  background:rgba(255,255,255,.1);
+  backdrop-filter:blur(16px);
+  text-align:center;
+  box-shadow:0 0 80px rgba(255,0,255,.7);
 }
+.timer{display:flex;gap:20px;justify-content:center}
+.box{
+  min-width:120px;
+  padding:20px;
+  background:rgba(255,255,255,.15);
+  border-radius:18px;
+}
+.box span{font-size:3rem;font-weight:bold;color:#00ffff}
 h1{
-  font-size:2.6rem;
-  background:linear-gradient(90deg,#ff00ff,#00ffff);
+  background:linear-gradient(90deg,#ff00ff,#00ffff,#ffff00);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
 }
-.subtitle{margin:15px 0 25px;opacity:.85}
-.timer{display:flex;gap:20px;justify-content:center}
-.box{
-  min-width:110px;
-  padding:18px;
-  border-radius:16px;
-  background:rgba(255,255,255,.15);
+h4{
+  margin-top:20px;
+  letter-spacing:4px;
+  animation:glitch 1.2s infinite;
 }
-.box span{font-size:2.8rem;font-weight:bold;color:#00ffff}
-.hidden{display:none}
-
-/* ===== CELEBRATION ===== */
+@keyframes glitch{
+  0%{text-shadow:2px 0 #ff00ff,-2px 0 #00ffff}
+  50%{text-shadow:-2px 0 #ff00ff,2px 0 #00ffff}
+  100%{text-shadow:2px 0 #ff00ff,-2px 0 #00ffff}
+}
 #celebration{
   position:fixed;
   inset:0;
@@ -53,26 +55,18 @@ h1{
   align-items:center;
   justify-content:center;
   flex-direction:column;
-  z-index:5;
 }
 #celebration h2{
-  font-size:4.5rem;
-  text-align:center;
+  font-size:4.8rem;
+  animation:pulse 1.4s infinite alternate;
   background:linear-gradient(90deg,#ff00ff,#00ffff,#ffff00);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
-  animation:glow 1.2s infinite alternate;
 }
-@keyframes glow{
-  from{text-shadow:0 0 20px #ff00ff}
-  to{text-shadow:0 0 60px #00ffff}
+@keyframes pulse{
+  from{text-shadow:0 0 30px #ff00ff}
+  to{text-shadow:0 0 100px #00ffff}
 }
-.credit{
-  margin-top:20px;
-  opacity:.7;
-}
-
-/* ===== CANVAS ===== */
 canvas{
   position:fixed;
   inset:0;
@@ -83,86 +77,55 @@ canvas{
 
 <body>
 
-<div id="countdownBox">
-  <h1 id="title"></h1>
-  <div class="subtitle" id="subtitle"></div>
-
+<div id="countdown">
+  <h1>NEW YEAR COUNTDOWN</h1>
   <div class="timer">
     <div class="box"><span id="m">10</span><div>MIN</div></div>
     <div class="box"><span id="s">00</span><div>SEC</div></div>
   </div>
-
-  <select id="lang" style="margin-top:20px;padding:10px;border-radius:12px">
-    <option value="auto">🌍 Auto</option>
-    <option value="en">English</option>
-    <option value="ru">Русский</option>
-  </select>
+  <h4>CREATED BY DEMON ALEX 👾</h4>
 </div>
 
 <div id="celebration">
   <h2>HAPPY NEW YEAR 2026</h2>
-  <div class="credit">BY DEMON ALEXANDER 👾👾</div>
+  <h4>CREATED BY DEMON ALEX 👾👾</h4>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-/* ===== LANGUAGE ===== */
-const texts={
-  en:{title:"New Year Countdown",sub:"Something magical is coming…"},
-  ru:{title:"Новогодний отсчёт",sub:"Скоро произойдёт чудо…"}
-};
-function detectLang(){
-  if(lang.value!=="auto") return lang.value;
-  return navigator.language.startsWith("ru")?"ru":"en";
-}
-function applyLang(){
-  const l=detectLang();
-  title.textContent=texts[l].title;
-  subtitle.textContent=texts[l].sub;
-}
-lang.onchange=applyLang;
-applyLang();
-
-/* ===== COUNTDOWN ===== */
-const DURATION=600;
-let end=Date.now()+DURATION*1000;
-
-function tick(){
+/* COUNTDOWN */
+let end=Date.now()+600000;
+const timer=setInterval(()=>{
   let r=Math.max(0,Math.floor((end-Date.now())/1000));
   m.textContent=String(Math.floor(r/60)).padStart(2,"0");
   s.textContent=String(r%60).padStart(2,"0");
-
   if(r===0){
-    clearInterval(timerInt);
-    startCelebration();
+    clearInterval(timer);
+    launchCelebration();
   }
-}
-const timerInt=setInterval(tick,1000);
-tick();
+},1000);
 
-/* ===== FIREWORK ENGINE (OPTIMIZED) ===== */
-const canvas=document.getElementById("c");
-const ctx=canvas.getContext("2d");
+/* CANVAS */
+const canvas=c,ctx=canvas.getContext("2d");
 function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
 resize();addEventListener("resize",resize);
 
-let particles=[];
-function spawn(x,y,count,color){
-  for(let i=0;i<count;i++){
-    particles.push({
+/* PARTICLES */
+let parts=[];
+function explode(x,y,count,color){
+  for(let i=0;i<count;i++)
+    parts.push({
       x,y,
-      vx:(Math.random()-.5)*8,
-      vy:(Math.random()-.5)*8,
-      a:1,
-      c:color
+      vx:(Math.random()-.5)*12,
+      vy:(Math.random()-.5)*12,
+      a:1,c:color
     });
-  }
 }
-function animate(){
+function loop(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  particles.forEach(p=>{
-    p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.a-=.015;
+  parts.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.05;p.a-=.015;
     ctx.globalAlpha=p.a;
     ctx.fillStyle=p.c;
     ctx.beginPath();
@@ -170,39 +133,81 @@ function animate(){
     ctx.fill();
   });
   ctx.globalAlpha=1;
-  particles=particles.filter(p=>p.a>0);
-  requestAnimationFrame(animate);
+  parts=parts.filter(p=>p.a>0);
+  requestAnimationFrame(loop);
 }
-animate();
+loop();
 
-/* ===== FUNKY SOUNDS ===== */
-const funkSounds=[
-  "https://assets.mixkit.co/sfx/preview/mixkit-deep-bass-drop-1180.mp3",
-  "https://assets.mixkit.co/sfx/preview/mixkit-club-bass-hit-2294.mp3",
-  "https://assets.mixkit.co/sfx/preview/mixkit-heavy-bass-impact-2297.mp3"
-];
-function playFunk(){
-  const a=new Audio(funkSounds[Math.random()*funkSounds.length|0]);
-  a.volume=0.9;
-  a.play();
+/* SPELLING FIREWORKS */
+function spell(text,y){
+  ctx.font="bold 96px Arial";
+  ctx.textAlign="center";
+  ctx.fillText(text,canvas.width/2,y);
+  const d=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  let pts=[];
+  for(let py=0;py<canvas.height;py+=6)
+    for(let px=0;px<canvas.width;px+=6)
+      if(d[(py*canvas.width+px)*4+3]>150)
+        pts.push({x:px,y:py});
+  let i=0;
+  const draw=setInterval(()=>{
+    if(i>=pts.length){clearInterval(draw);return}
+    const p=pts[i++];
+    explode(p.x,p.y,2,"#00ffff");
+  },2);
 }
 
-/* ===== CELEBRATION MODE ===== */
-function startCelebration(){
-  countdownBox.remove();
+/* AUDIO SYSTEM (10+ SOUNDS) */
+const sounds={
+  music:new Audio("https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3"),
+  bass:new Audio("https://assets.mixkit.co/sfx/preview/mixkit-deep-bass-drop-132.mp3"),
+  riser:new Audio("https://assets.mixkit.co/sfx/preview/mixkit-fast-rocket-whoosh-1714.mp3"),
+  boom:new Audio("https://assets.mixkit.co/sfx/preview/mixkit-explosion-hit-1704.mp3"),
+  pop:new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg"),
+  crackle:new Audio("https://actions.google.com/sounds/v1/impacts/crash.ogg"),
+  zap:new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"),
+  sweep:new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
+};
+Object.values(sounds).forEach(a=>a.volume=.8);
+
+/* BEAT SYNC */
+const AC=window.AudioContext||webkitAudioContext;
+const audioCtx=new AC();
+const src=audioCtx.createMediaElementSource(sounds.music);
+const analyser=audioCtx.createAnalyser();
+src.connect(analyser);
+analyser.connect(audioCtx.destination);
+analyser.fftSize=256;
+const data=new Uint8Array(analyser.frequencyBinCount);
+
+function beats(){
+  analyser.getByteFrequencyData(data);
+  let bass=data.slice(0,10).reduce((a,b)=>a+b)/10;
+  if(bass>180){
+    explode(Math.random()*canvas.width,Math.random()*canvas.height*.6,160,
+      ["#ff00ff","#00ffff","#ffff00","#00ff66"][Math.random()*4|0]);
+    navigator.vibrate?.(70);
+    sounds.pop.cloneNode().play();
+  }
+  requestAnimationFrame(beats);
+}
+
+/* START CELEBRATION */
+function launchCelebration(){
+  countdown.remove();
   celebration.style.display="flex";
 
-  playFunk(); // bass drop at 0:00
+  audioCtx.resume();
+  sounds.music.loop=true;
+  sounds.music.play();
+  sounds.bass.play();
+  sounds.riser.play();
 
-  setInterval(()=>{
-    spawn(
-      Math.random()*canvas.width,
-      Math.random()*canvas.height*0.6,
-      120,
-      ["#ff00ff","#00ffff","#ffff00","#00ff66"][Math.random()*4|0]
-    );
-    playFunk();
-  },600);
+  beats();
+
+  setTimeout(()=>spell("HAPPY NEW YEAR 2026 ☄️☄️",canvas.height/2),900);
+  setTimeout(()=>spell("CREATED BY DEMON ALEX 👾👾",canvas.height/2+150),2300);
 }
 </script>
 </body>
