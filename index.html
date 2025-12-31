@@ -1,37 +1,38 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>New Year Countdown</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,Arial,sans-serif}
 body{
   min-height:100vh;
-  background:radial-gradient(circle at top,#1b0033,#000);
+  background:radial-gradient(circle at top,#1a0033,#000);
   color:#fff;
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden
+  overflow:hidden;
 }
-.container{
-  z-index:2;
+
+/* ===== COUNTDOWN BLOCK ===== */
+#countdownBox{
   text-align:center;
   padding:40px 60px;
   border-radius:24px;
-  background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.02));
-  backdrop-filter:blur(12px);
-  box-shadow:0 0 40px rgba(180,0,255,.45)
+  backdrop-filter:blur(14px);
+  background:rgba(255,255,255,.08);
+  box-shadow:0 0 40px rgba(180,0,255,.6);
+  z-index:10;
 }
 h1{
   font-size:2.6rem;
   background:linear-gradient(90deg,#ff00ff,#00ffff);
   -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent
+  -webkit-text-fill-color:transparent;
 }
 .subtitle{margin:15px 0 25px;opacity:.85}
 .timer{display:flex;gap:20px;justify-content:center}
@@ -39,249 +40,170 @@ h1{
   min-width:110px;
   padding:18px;
   border-radius:16px;
-  background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.03))
+  background:rgba(255,255,255,.15);
 }
 .box span{font-size:2.8rem;font-weight:bold;color:#00ffff}
-.controls{margin-top:20px;display:flex;flex-direction:column;gap:12px}
-button,input{
-  padding:10px;
-  border-radius:12px;
-  border:none;
-  font-weight:bold
-}
-button{background:#00ffff;color:#000}
 .hidden{display:none}
-.year{
-  font-size:5rem;
-  font-weight:900;
-  margin-top:20px;
-  letter-spacing:6px;
-  background:linear-gradient(90deg,#ff00ff,#00ffff);
+
+/* ===== CELEBRATION ===== */
+#celebration{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:5;
+}
+#celebration h2{
+  font-size:4.5rem;
+  text-align:center;
+  background:linear-gradient(90deg,#ff00ff,#00ffff,#ffff00);
   -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent
+  -webkit-text-fill-color:transparent;
+  animation:glow 1.2s infinite alternate;
+}
+@keyframes glow{
+  from{text-shadow:0 0 20px #ff00ff}
+  to{text-shadow:0 0 60px #00ffff}
 }
 .credit{
-  margin-top:15px;
-  font-size:.9rem;
-  opacity:.75
+  margin-top:20px;
+  opacity:.7;
+}
+
+/* ===== CANVAS ===== */
+canvas{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
 }
 </style>
 </head>
 
 <body>
-<div class="container">
-  <h1>New Year Countdown</h1>
-  <div class="subtitle" id="subtitle">Something magical is coming…</div>
 
-  <div class="timer" id="timer">
+<div id="countdownBox">
+  <h1 id="title"></h1>
+  <div class="subtitle" id="subtitle"></div>
+
+  <div class="timer">
     <div class="box"><span id="m">10</span><div>MIN</div></div>
     <div class="box"><span id="s">00</span><div>SEC</div></div>
   </div>
 
-  <div class="controls">
-    <label>🎆 Intensity <span id="intVal">3</span></label>
-    <input type="range" min="1" max="6" value="3" id="intensity">
+  <select id="lang" style="margin-top:20px;padding:10px;border-radius:12px">
+    <option value="auto">🌍 Auto</option>
+    <option value="en">English</option>
+    <option value="ru">Русский</option>
+  </select>
+</div>
 
-    <label>🔊 Volume <span id="volVal">70%</span></label>
-    <input type="range" min="0" max="100" value="70" id="volume">
-
-    <button id="reset">🔁 Reset Countdown</button>
-  </div>
-
-  <div class="year hidden" id="year">2026</div>
+<div id="celebration">
+  <h2>HAPPY NEW YEAR 2026</h2>
   <div class="credit">BY DEMON ALEXANDER 👾👾</div>
 </div>
 
+<canvas id="c"></canvas>
+
 <script>
-/* ================= CONFIG ================= */
-const DURATION = 10 * 60;
-const KEY = "ny_10min";
+/* ===== LANGUAGE ===== */
+const texts={
+  en:{title:"New Year Countdown",sub:"Something magical is coming…"},
+  ru:{title:"Новогодний отсчёт",sub:"Скоро произойдёт чудо…"}
+};
+function detectLang(){
+  if(lang.value!=="auto") return lang.value;
+  return navigator.language.startsWith("ru")?"ru":"en";
+}
+function applyLang(){
+  const l=detectLang();
+  title.textContent=texts[l].title;
+  subtitle.textContent=texts[l].sub;
+}
+lang.onchange=applyLang;
+applyLang();
 
-/* ================= STATE ================= */
-let intensity = 3;
-let volume = 0.7;
-let finished = false;
-let textDone = false;
-let beatInterval;
-
-/* ================= SOUNDS ================= */
-const fxSounds = [
-  "https://actions.google.com/sounds/v1/fireworks/fireworks_burst.ogg",
-  "https://actions.google.com/sounds/v1/fireworks/fireworks_whistle.ogg",
-  "https://actions.google.com/sounds/v1/cartoon/pop.ogg",
-  "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg",
-  "https://actions.google.com/sounds/v1/cartoon/descending_whistle.ogg",
-  "https://actions.google.com/sounds/v1/cartoon/metal_thud_and_wobble.ogg",
-  "https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_hit.ogg",
-  "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
-];
-
-/* ================= COUNTDOWN ================= */
-let end = localStorage.getItem(KEY);
-if (!end || end <= Date.now()) {
-  end = Date.now() + DURATION * 1000;
-  localStorage.setItem(KEY, end);
-} else end = parseInt(end,10);
+/* ===== COUNTDOWN ===== */
+const DURATION=600;
+let end=Date.now()+DURATION*1000;
 
 function tick(){
-  let r = Math.max(0, Math.floor((end - Date.now()) / 1000));
-  m.textContent = String(Math.floor(r/60)).padStart(2,"0");
-  s.textContent = String(r%60).padStart(2,"0");
+  let r=Math.max(0,Math.floor((end-Date.now())/1000));
+  m.textContent=String(Math.floor(r/60)).padStart(2,"0");
+  s.textContent=String(r%60).padStart(2,"0");
 
-  if (r === 0 && !finished){
-    finished = true;
-    timer.classList.add("hidden");
-    year.classList.remove("hidden");
-    subtitle.textContent = "🎉 Celebration Mode 🎉";
-    bassDrop();
-    startFireworks();
-    startBassBeats();
-    setTimeout(explodeText, 1200);
-    localStorage.removeItem(KEY);
+  if(r===0){
+    clearInterval(timerInt);
+    startCelebration();
   }
 }
-setInterval(tick,1000);
+const timerInt=setInterval(tick,1000);
 tick();
 
-reset.onclick = ()=>{
-  localStorage.removeItem(KEY);
-  location.reload();
-};
+/* ===== FIREWORK ENGINE (OPTIMIZED) ===== */
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+resize();addEventListener("resize",resize);
 
-intensity.oninput = e=>{
-  intensity = +e.target.value;
-  intVal.textContent = intensity;
-};
-volume.oninput = e=>{
-  volume = e.target.value/100;
-  volVal.textContent = e.target.value + "%";
-};
-
-/* ================= CANVAS ================= */
-const canvas = document.createElement("canvas");
-canvas.style.cssText="position:fixed;inset:0;pointer-events:none";
-document.body.appendChild(canvas);
-const ctx = canvas.getContext("2d");
-function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-resize();
-addEventListener("resize",resize);
-
-let fireworks = [];
-
-/* ================= FIREWORK ================= */
-class FW{
-  constructor(x,y,c){
-    this.p=[];
-    for(let i=0;i<70*intensity;i++){
-      this.p.push({x,y,vx:(Math.random()-.5)*9,vy:(Math.random()-.5)*9,a:1,c});
-    }
-  }
-  u(){
-    this.p.forEach(o=>{
-      o.x+=o.vx;o.y+=o.vy;o.vy+=.05;o.a-=.015;
+let particles=[];
+function spawn(x,y,count,color){
+  for(let i=0;i<count;i++){
+    particles.push({
+      x,y,
+      vx:(Math.random()-.5)*8,
+      vy:(Math.random()-.5)*8,
+      a:1,
+      c:color
     });
-    this.p=this.p.filter(o=>o.a>0);
-  }
-  d(){
-    this.p.forEach(o=>{
-      ctx.globalAlpha=o.a;
-      ctx.fillStyle=o.c;
-      ctx.beginPath();
-      ctx.arc(o.x,o.y,2,0,Math.PI*2);
-      ctx.fill();
-    });
-    ctx.globalAlpha=1;
   }
 }
-
-function launch(x,y){
-  fireworks.push(new FW(
-    x,y,
-    ["#ff00ff","#00ffff","#ffff00","#00ff66","#ff3300"][Math.random()*5|0]
-  ));
-  playFX();
-}
-
 function animate(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  fireworks.forEach(f=>{f.u();f.d();});
+  particles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.a-=.015;
+    ctx.globalAlpha=p.a;
+    ctx.fillStyle=p.c;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,2,0,Math.PI*2);
+    ctx.fill();
+  });
+  ctx.globalAlpha=1;
+  particles=particles.filter(p=>p.a>0);
   requestAnimationFrame(animate);
 }
+animate();
 
-function startFireworks(){
-  animate();
-}
-
-addEventListener("click",e=>launch(e.clientX,e.clientY));
-addEventListener("touchstart",e=>launch(e.touches[0].clientX,e.touches[0].clientY));
-
-/* ================= TEXT FIREWORK ================= */
-function explodeText(){
-  if(textDone) return;
-  textDone=true;
-  ctx.font="bold 80px Arial";
-  ctx.textAlign="center";
-  ctx.fillText("HAPPY NEW YEAR 2026",canvas.width/2,canvas.height/2);
-  const img=ctx.getImageData(0,0,canvas.width,canvas.height).data;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  for(let y=0;y<canvas.height;y+=6)
-    for(let x=0;x<canvas.width;x+=6)
-      if(img[(y*canvas.width+x)*4+3]>150)
-        fireworks.push(new FW(x,y,"#00ffff"));
-}
-
-/* ================= BASS DROP ================= */
-function bassDrop(){
-  const ac = new (window.AudioContext||window.webkitAudioContext)();
-  const osc = ac.createOscillator();
-  const gain = ac.createGain();
-
-  osc.type="sine";
-  osc.frequency.setValueAtTime(140,ac.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(32,ac.currentTime+1);
-
-  gain.gain.setValueAtTime(0.001,ac.currentTime);
-  gain.gain.exponentialRampToValueAtTime(volume,ac.currentTime+0.1);
-  gain.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+1.2);
-
-  osc.connect(gain);
-  gain.connect(ac.destination);
-
-  osc.start();
-  osc.stop(ac.currentTime+1.2);
-
-  document.body.animate([
-    {transform:"translate(0,0)"},
-    {transform:"translate(-12px,6px)"},
-    {transform:"translate(12px,-6px)"},
-    {transform:"translate(0,0)"}
-  ],{duration:500});
-
-  document.body.style.background="#fff";
-  setTimeout(()=>document.body.style.background="",90);
-}
-
-/* ================= BASS BEAT SYNC ================= */
-function startBassBeats(){
-  beatInterval = setInterval(()=>{
-    const x = Math.random()*canvas.width;
-    const y = Math.random()*canvas.height*0.5;
-    launch(x,y);
-  }, 450); // beat timing 🔥
-}
-
-/* ================= FX SOUND ================= */
-function playFX(){
-  const a = new Audio(fxSounds[Math.random()*fxSounds.length|0]);
-  a.volume = volume;
+/* ===== FUNKY SOUNDS ===== */
+const funkSounds=[
+  "https://assets.mixkit.co/sfx/preview/mixkit-deep-bass-drop-1180.mp3",
+  "https://assets.mixkit.co/sfx/preview/mixkit-club-bass-hit-2294.mp3",
+  "https://assets.mixkit.co/sfx/preview/mixkit-heavy-bass-impact-2297.mp3"
+];
+function playFunk(){
+  const a=new Audio(funkSounds[Math.random()*funkSounds.length|0]);
+  a.volume=0.9;
   a.play();
 }
 
-/* ================= FULLSCREEN ================= */
-document.documentElement.requestFullscreen?.();
+/* ===== CELEBRATION MODE ===== */
+function startCelebration(){
+  countdownBox.remove();
+  celebration.style.display="flex";
+
+  playFunk(); // bass drop at 0:00
+
+  setInterval(()=>{
+    spawn(
+      Math.random()*canvas.width,
+      Math.random()*canvas.height*0.6,
+      120,
+      ["#ff00ff","#00ffff","#ffff00","#00ff66"][Math.random()*4|0]
+    );
+    playFunk();
+  },600);
+}
 </script>
 </body>
 </html>
