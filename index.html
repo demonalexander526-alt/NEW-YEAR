@@ -33,6 +33,15 @@ body{
   border-radius:18px;
 }
 .box span{font-size:3rem;font-weight:bold;color:#00ffff}
+button{
+  margin-top:18px;
+  padding:12px 22px;
+  border-radius:14px;
+  border:none;
+  font-weight:bold;
+  background:#00ffff;
+  color:#000;
+}
 h1{
   background:linear-gradient(90deg,#ff00ff,#00ffff,#ffff00);
   -webkit-background-clip:text;
@@ -67,11 +76,7 @@ h4{
   from{text-shadow:0 0 30px #ff00ff}
   to{text-shadow:0 0 100px #00ffff}
 }
-canvas{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-}
+canvas{position:fixed;inset:0;pointer-events:none}
 </style>
 </head>
 
@@ -83,6 +88,7 @@ canvas{
     <div class="box"><span id="m">10</span><div>MIN</div></div>
     <div class="box"><span id="s">00</span><div>SEC</div></div>
   </div>
+  <button id="reset">🔁 Reset Countdown</button>
   <h4>CREATED BY DEMON ALEX 👾</h4>
 </div>
 
@@ -94,24 +100,39 @@ canvas{
 <canvas id="c"></canvas>
 
 <script>
-/* COUNTDOWN */
-let end=Date.now()+600000;
+/* ---------- COUNTDOWN WITH PERSISTENCE ---------- */
+const KEY="ny_end_time";
+const DURATION=600; // 10 minutes
+
+let end=localStorage.getItem(KEY);
+if(!end){
+  end=Date.now()+DURATION*1000;
+  localStorage.setItem(KEY,end);
+}else end=parseInt(end);
+
 const timer=setInterval(()=>{
   let r=Math.max(0,Math.floor((end-Date.now())/1000));
   m.textContent=String(Math.floor(r/60)).padStart(2,"0");
   s.textContent=String(r%60).padStart(2,"0");
+
   if(r===0){
     clearInterval(timer);
+    localStorage.removeItem(KEY);
     launchCelebration();
   }
 },1000);
 
-/* CANVAS */
+/* RESET BUTTON */
+reset.onclick=()=>{
+  localStorage.removeItem(KEY);
+  location.reload();
+};
+
+/* ---------- CANVAS FIREWORKS ---------- */
 const canvas=c,ctx=canvas.getContext("2d");
 function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
 resize();addEventListener("resize",resize);
 
-/* PARTICLES */
 let parts=[];
 function explode(x,y,count,color){
   for(let i=0;i<count;i++)
@@ -138,7 +159,7 @@ function loop(){
 }
 loop();
 
-/* SPELLING FIREWORKS */
+/* ---------- SPELLING FIREWORKS ---------- */
 function spell(text,y){
   ctx.font="bold 96px Arial";
   ctx.textAlign="center";
@@ -158,23 +179,13 @@ function spell(text,y){
   },2);
 }
 
-/* AUDIO SYSTEM (10+ SOUNDS) */
-const sounds={
-  music:new Audio("https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3"),
-  bass:new Audio("https://assets.mixkit.co/sfx/preview/mixkit-deep-bass-drop-132.mp3"),
-  riser:new Audio("https://assets.mixkit.co/sfx/preview/mixkit-fast-rocket-whoosh-1714.mp3"),
-  boom:new Audio("https://assets.mixkit.co/sfx/preview/mixkit-explosion-hit-1704.mp3"),
-  pop:new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg"),
-  crackle:new Audio("https://actions.google.com/sounds/v1/impacts/crash.ogg"),
-  zap:new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"),
-  sweep:new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
-};
-Object.values(sounds).forEach(a=>a.volume=.8);
+/* ---------- AUDIO & BEAT SYNC ---------- */
+const music=new Audio("https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3");
+music.loop=true;music.volume=.8;
 
-/* BEAT SYNC */
 const AC=window.AudioContext||webkitAudioContext;
 const audioCtx=new AC();
-const src=audioCtx.createMediaElementSource(sounds.music);
+const src=audioCtx.createMediaElementSource(music);
 const analyser=audioCtx.createAnalyser();
 src.connect(analyser);
 analyser.connect(audioCtx.destination);
@@ -188,26 +199,19 @@ function beats(){
     explode(Math.random()*canvas.width,Math.random()*canvas.height*.6,160,
       ["#ff00ff","#00ffff","#ffff00","#00ff66"][Math.random()*4|0]);
     navigator.vibrate?.(70);
-    sounds.pop.cloneNode().play();
   }
   requestAnimationFrame(beats);
 }
 
-/* START CELEBRATION */
+/* ---------- START CELEBRATION ---------- */
 function launchCelebration(){
   countdown.remove();
   celebration.style.display="flex";
-
   audioCtx.resume();
-  sounds.music.loop=true;
-  sounds.music.play();
-  sounds.bass.play();
-  sounds.riser.play();
-
+  music.play();
   beats();
-
-  setTimeout(()=>spell("HAPPY NEW YEAR 2026 ☄️☄️",canvas.height/2),900);
-  setTimeout(()=>spell("CREATED BY DEMON ALEX 👾👾",canvas.height/2+150),2300);
+  setTimeout(()=>spell("HAPPY NEW YEAR 2026 ☄️☄️",canvas.height/2),800);
+  setTimeout(()=>spell("CREATED BY DEMON ALEX 👾👾",canvas.height/2+150),2200);
 }
 </script>
 </body>
